@@ -11,46 +11,87 @@ from random import randint
 
 class Automation:
 
-    def get_date(self):
+    def date_parser(self):
+        with open("file","r") as f:
+            dates=f.readlines()
+            xpath=".//*[@id='checkIn']"
+            for date in dates:
+                start_date=date.split("/")
+                input_date=int(start_date[0])
+                input_month=int(start_date[1])
+                input_year=int(start_date[2])
+                self.get_date(xpath,input_date,input_month,input_year)
+                xpath=".//*[@id='checkOut']"
 
-        fi=open("file",'r')
-        date=fi.readline()
-        print date
-        startdate=self.driver.find_element_by_xpath(".// *[ @ id = 'date_picker_in_0']")
-        day=self.driver.find_element_by_class_name("day day_30")
-        startdate.send_keys(date)
+
+    def get_date(self,xpath,input_date,input_month,input_year):
+        "validate date and automate journey dates"
+
+        if input_month<int(time.strftime("%m")):
+            print "input month is less than current month"
+            exit()
+        elif input_date<int(time.strftime("%d")) and input_month==int(time.strftime("%m")):
+            print "date is less than current date"
+            exit()
+        if input_year!=int(time.strftime("%Y")):
+            print "cannot book flights for next year or previous year"
+            exit()
+
+        calender_block=self.driver.find_element_by_xpath(xpath)
+        calender_block.click()
+        calender=self.driver.find_element_by_class_name("calendar")
+        months=calender.find_elements_by_class_name("month")
+
+        m=months[0]
+        caption= m.find_elements_by_class_name("caption")
+        #print caption[0].text
+        monthstamp=time.strptime(caption[0].text,"%B %Y")
+        month=monthstamp[1]
+        #print month
+        if input_month < month:
+
+            diff=month-input_month
+            for i in range(diff):
+                ele = self.driver.find_element_by_class_name("prev")
+                ele.click()
+                time.sleep(5)
+            months = calender.find_elements_by_class_name("month")
+
+        if input_month>month:
+
+            diff=input_month-month
+
+         #   print diff
+            for i in range(diff):
+
+                ele = self.driver.find_element_by_class_name("next")
+                ele.click()
+                time.sleep(3)
+            months = calender.find_elements_by_class_name("month")
+
+        for m in months:
+            time.sleep(5)
+            dates=m.find_elements_by_tag_name("a")
+            for date in dates:
+                if int(date.text)==input_date:
+                    date.click()
+                    return
+
+
+        time.sleep(5)
 
 
     def initializeDriver(self):
+        "initialize the driver with firefox"
         self.driver = webdriver.Firefox()
         self.driver.get("https://www.tripadvisor.in")
         self.automate()
 
-    """def handle_popups(self):
-        handles=self.driver.window_handles
-        main_window=self.driver.current_window_handle
-        print "main" + main_window
-
-        while len(handles)>=2:
-            if len(handles)>1:
-
-                for i in range(1,len(handles)):
-
-                    print "closed"+handles[i]
-                    self.driver.switch_to.window(handles[i])
-                    self.driver.close()
-
-                    self.driver.switch_to.window(main_window)
-                    print "switched" + main_window
-
-            else:
-                time.sleep(5)
-            handles = self.driver.window_handles"""
-
     def handle_popups(self):
+        "handles the pop up appeared"
         handles = self.driver.window_handles
         main_window = self.driver.current_window_handle
-        print "main" + main_window
+        #print "main" + main_window
 
 
         while len(handles) >= 2:
@@ -60,21 +101,23 @@ class Automation:
                     if handle!=main_window:
                         try:
 
-                            print "closed" + handle
+           #                 print "closed" + handle
                             self.driver.switch_to.window(handle)
                             self.driver.close()
                         except:
                             continue
 
-                print "before switched" + main_window
+         #       print "before switched" + main_window
                 self.driver.switch_to.window(main_window)
-                print "switched" + main_window
+          #      print "switched" + main_window
 
             else:
                 time.sleep(5)
             handles = self.driver.window_handles
 
     def find_price(self):
+
+        "finds the minimum price from list displayed"
         element = WebDriverWait(self.driver, 20).until(
             EC.presence_of_element_located((By.CLASS_NAME, "flightList")))
 
@@ -85,11 +128,11 @@ class Automation:
             print "no div tags found"
         else:
             for div in divs:
-                print div.get_attribute("class")
+            #    print div.get_attribute("class")
                 if div.get_attribute("class") == "price":
                     nos = re.findall(r"\d+", div.text)
                     no = nos[0] + nos[1]
-                    print no
+             #       print no
 
                     if int(no) < self.price:
                         self.price = int(no)
@@ -100,17 +143,21 @@ class Automation:
             self.price_div.click()
 
     def select_any_from_more(self):
+
+        "clicks on more option and selects the random option"
         more_item=WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH,".//*[@id='taplc_flight_results_sorts_0']/div[1]/span[2]/span[4]/label")))
         more_item.click()
         more=self.driver.find_element_by_id("sort_sub_items")
         divs=more.find_elements_by_tag_name("div")
-        div=divs[1]
+        random_no=randint(0,4)
+        div=divs[random_no]
         div.click()
 
 
 
     def automate(self):
 
+        "main automation function"
         element=self.driver.find_element_by_xpath(".//*[@id='rdoFlights']/div/span")
         element.click()
 
@@ -122,8 +169,6 @@ class Automation:
         source_autofill.click()
 
 
-
-
         dest= self.driver.find_element_by_xpath(".//*[@id='metaFlightTo']")
         dest.send_keys('Delhi')
 
@@ -131,7 +176,7 @@ class Automation:
         dest_autofill=WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, "autocompleter-selected")))
         dest_autofill.click()
 
-        #self.get_date()
+        self.date_parser()
         adult = self.driver.find_element_by_id("fadults")
         adult.click()
         travellers=adult.find_elements_by_tag_name("option")
@@ -148,38 +193,17 @@ class Automation:
         search_flights.click()
 
 
-
-        #print self.driver.current_window_handle
-        #time.sleep(20)
-
-        """element = WebDriverWait(self.driver, 20).until(
-            self.driver.find_element_by_xpath("//div[@class='ui_close_x']")
-        )
-        element.click()"""
-
-        """print self.driver.current_window_handle
-
-        print len(self.driver.window_handles)
-        li=self.driver.window_handles
-        print li
-        print li[0]
-        print li[1]
-        self.driver.switch_to.window(li[1])"""
-
-        #self.handle_popups()
         element = WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH,"//div[@class='ui_close_x']")))
         element.click()
-        #time.sleep(20)
-
-        """close_popup=self.driver.find_element_by_xpath("//div[@class='ui_close_x']")
-        close_popup.click()"""
 
         self.handle_popups()
-        "finds min price from list provided"
+        #select random option from more tag
         self.select_any_from_more()
+        "finds min price from list provided"
+
         time.sleep(20)
         self.find_price()
-        #method code
+
 
 
 
