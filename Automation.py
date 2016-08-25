@@ -100,7 +100,7 @@ class Automation:
             self.price_div.click()
 
     def select_any_from_more(self):
-        more_item=self.driver.find_element_by_xpath(".//*[@id='taplc_flight_results_sorts_0']/div[1]/span[2]/span[4]/label")
+        more_item=WebDriverWait(self.driver, 20).until(EC.visibility_of_element_located((By.XPATH,".//*[@id='taplc_flight_results_sorts_0']/div[1]/span[2]/span[4]/label")))
         more_item.click()
         more=self.driver.find_element_by_id("sort_sub_items")
         divs=more.find_elements_by_tag_name("div")
